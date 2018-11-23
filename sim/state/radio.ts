@@ -9,6 +9,7 @@ namespace pxsim {
     // Extends interface in pxt-core
     export interface SimulatorRadioPacketPayload {
         bufferData?: Uint8Array;
+        imageData?: Image;
     }
 
     export class RadioDatagram {
@@ -38,8 +39,14 @@ namespace pxsim {
 
         recv(): PacketBuffer {
             let r = this.datagram.shift();
-            if (!r) r = RadioDatagram.defaultPacket();
-            return this.lastReceived = r;
+            if (!r) {
+                r = RadioDatagram.defaultPacket();
+                console.debug("No packet");
+            } else {
+                this.lastReceived = r;
+                console.debug('Datagram recv', this, r);
+            }
+            return this.lastReceived;
         }
 
         private static defaultPacket(): PacketBuffer {
@@ -98,7 +105,8 @@ namespace pxsim.radio {
         NUMBER = 0,
         VALUE = 1,
         STRING = 2,
-        BUFFER = 3
+        BUFFER = 3,
+        IMAGE = 5
     }
 
     export function raiseEvent(id: number, eventid: number): void {
@@ -122,6 +130,15 @@ namespace pxsim.radio {
             type: PacketPayloadType.NUMBER,
             groupId: board().radioState.groupId,
             numberData: value,
+        });
+    }
+
+    export function sendImage(image: Image): void {
+        console.debug("Send image", image);
+        board().radioState.datagram.send({
+            type: PacketPayloadType.IMAGE,
+            groupId: board().radioState.groupId,
+            imageData: image,
         });
     }
 
@@ -171,7 +188,14 @@ namespace pxsim.radio {
 
     export function receiveNumber(): number {
         const packet = board().radioState.datagram.recv();
+        console.debug('Receive number', packet);
         return receivedNumber();
+    }
+
+    export function receiveImage(): Image {
+        const packet = board().radioState.datagram.recv();
+        console.debug('Receive Image', packet);
+        return receivedImage();
     }
 
     export function receiveString(): string {
@@ -190,6 +214,14 @@ namespace pxsim.radio {
 
     export function receivedNumber(): number {
         return board().radioState.datagram.lastReceived.payload.numberData || 0;
+    }
+
+    export function receivedImage(): Image {
+        let data: number[] = [1, 0, 1, 0, 0];
+        console.debug("Recived image", board().radioState.datagram.lastReceived.payload.imageData);
+        if (board().radioState.datagram.lastReceived.payload.imageData)
+            return new Image(5, board().radioState.datagram.lastReceived.payload.imageData.data);
+        return new Image(5, data);
     }
 
     export function receivedSerial(): number {

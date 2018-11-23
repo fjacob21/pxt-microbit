@@ -22,6 +22,12 @@ namespace radio {
          * or 0 if this packet did not contain a number.
          */
         public receivedNumber: number;
+
+        /**
+         * The Image payload if an Image was sent in this packet (via ``sendImage()``)
+         * or 0 if this packet did not contain an Image.
+         */
+        public receivedImage: Image;
         /**
          * The string payload if a string was sent in this packet (via ``sendString()`` or ``sendValue()``)
          * or the empty string if this packet did not contain a string.
@@ -44,6 +50,7 @@ namespace radio {
          * The received signal strength indicator (RSSI) of the packet.
          */
         public signal: number;
+        
     }
 
     /**
@@ -89,6 +96,24 @@ namespace radio {
         });
     }
 
+    /**
+     * Registers code to run when the radio receives an image.
+     */
+    //% help=radio/on-received-image blockHandlerKey="radioreceived"
+    //% blockId=radio_on_image block="on radio received" blockGap=16
+    //% useLoc="radio.onDataPacketReceived"
+    export function onReceivedImage(cb: (receivedImage: Image) => void) {
+        onDataReceived(() => {
+            receiveImage();
+            const packet = new Packet();
+            packet.time = receivedTime();
+            packet.serial = receivedSerial();
+            packet.signal = receivedSignalStrength();
+            packet.receivedImage = receivedImage();
+            lastPacket = packet;
+            cb(packet.receivedImage);
+        });
+    }
     /**
      * Registers code to run when the radio receives a key value pair.
      */

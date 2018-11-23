@@ -24,6 +24,15 @@ declare namespace radio {
     function sendNumber(value: number): void;
 
     /**
+     * Broadcasts an Image over radio to any connected micro:bit in the group.
+     * @param image the Image image
+     */
+    //% help=radio/send-image
+    //% weight=61
+    //% blockId=radio_datagram_send_image block="radio send image %image" blockGap=8 shim=radio::sendImage
+    function sendImage(image: Image): void;
+
+    /**
      * Broadcasts a name / value pair along with the device serial number
      * and running time to any connected micro:bit in the group.
      * @param name the field name (max 12 characters), eg: "name"
@@ -82,6 +91,16 @@ declare namespace radio {
     //% blockId=radio_datagram_receive block="radio receive number" blockGap=8
     //% deprecated=true shim=radio::receiveNumber
     function receiveNumber(): number;
+
+    /**
+     * Reads the next packet from the radio queue and returns the packet's image
+     * payload or 0 if the packet did not contain a number.
+     */
+    //% help=radio/receive-image
+    //% weight=46
+    //% blockId=radio_datagram_receive_image block="radio receive image" blockGap=8
+    //% deprecated=true shim=radio::receiveImage
+    function receiveImage(): Image;
 
     /**
      * Registers code to run when a packet is received over radio.
@@ -151,6 +170,14 @@ declare namespace radio {
      */
     //% help=radio/received-number shim=radio::receivedNumber
     function receivedNumber(): number;
+
+    /**
+     * Returns the number payload from the last packet taken from the radio queue
+     * (via ``receiveNumber``, ``receiveString``, etc) or 0 if that packet did not
+     * contain a number.
+     */
+    //% help=radio/received-number shim=radio::receivedImage
+    function receivedImage(): Image;
 
     /**
      * Returns the serial number of the sender micro:bit from the last packet taken

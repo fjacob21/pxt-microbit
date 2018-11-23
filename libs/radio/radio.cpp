@@ -35,6 +35,9 @@ using namespace pxt;
 // payload: number (9 ... 16), name length (17), name (18 ... 26)
 #define PACKET_TYPE_DOUBLE_VALUE 5
 
+// payload: number (9 ... 12)
+#define PACKET_TYPE_IMAGE 6
+
 //% color=#E3008C weight=96 icon="\uf012"
 namespace radio {
 
@@ -193,6 +196,7 @@ namespace radio {
                     m = getStringValue(buf + DOUBLE_VALUE_PACKET_NAME_LEN_OFFSET, MAX_FIELD_DOUBLE_NAME_LENGTH);
                 }
                 break;
+            case PACKET_TYPE_IMAGE:
             case PACKET_TYPE_NUMBER:
             case PACKET_TYPE_VALUE:
                 memcpy(&iv, buf + PACKET_PREFIX_LENGTH, sizeof(int));
@@ -255,6 +259,39 @@ namespace radio {
             memcpy(buf + PACKET_PREFIX_LENGTH, &dv, sizeof(double));
             uBit.radio.datagram.send(buf, length);
         }
+    }
+
+    /**
+     * Broadcasts an Image over radio to any connected micro:bit in the group.
+     * @param image the Image image
+     */
+    //% help=radio/send-image
+    //% weight=61
+    //% blockId=radio_datagram_send_image block="radio send image %image" blockGap=8
+    void sendImage(Image image) {
+        if (radioEnable() != MICROBIT_OK) return;
+
+        auto ubitImage = MicroBitImage(image->img);
+        int iv = 0;
+        auto h = ubitImage.height;
+        auto w = ubitImage.width;
+        for (auto i=0;i<5;i++){
+            for (auto j=0;j<5;j++){
+                int pix = ubitImage.getPixelValue(i, j);
+                if(pix)
+                    iv += (0x1 << (j * 5 + i));
+            }    
+        }
+        uBit.serial.send(",\"=>\":");
+        uBit.serial.send(h);
+        uBit.serial.send(w);
+        uint8_t length = PACKET_PREFIX_LENGTH + sizeof(int);
+        uint8_t buf[length];
+        memset(buf, 0, length);
+        setPacketPrefix(buf, PACKET_TYPE_IMAGE);
+        memcpy(buf + PACKET_PREFIX_LENGTH, &iv, sizeof(int));
+        uBit.radio.datagram.send(buf, length);
+    
     }
 
     /**
@@ -364,6 +401,23 @@ namespace radio {
             return fromInt(0);
     }
 
+    Image readImage() {
+        //auto data = (ImageData*)ptrOfLiteral(0);
+        uBit.serial.send(",\"v\":");
+        uBit.serial.send(ivalue);
+        MicroBitImage image(5,5);
+        for (auto i=0;i<5;i++){
+            for (auto j=0;j<5;j++){
+                auto pix = (ivalue >> (j * 5 + i)) & 0x1;
+                if (pix)
+                    image.setPixelValue(i, j, 255);
+            }    
+        }
+        auto refimage = new RefMImage(image.clone().leakData());
+        //MicroBitImage(image->img).
+        return refimage;
+    }
+
     /**
      * Reads the next packet from the radio queue and returns the packet's number
      * payload or 0 if the packet did not contain a number.
@@ -377,6 +431,21 @@ namespace radio {
         if (radioEnable() != MICROBIT_OK) return 0;
         receivePacket(false);
         return readNumber();
+    }
+
+    /**
+     * Reads the next packet from the radio queue and returns the packet's image
+     * payload or 0 if the packet did not contain a number.
+     */
+    //% help=radio/receive-image
+    //% weight=46
+    //% blockId=radio_datagram_receive_image block="radio receive image" blockGap=8
+    //% deprecated=true
+    Image receiveImage()
+    {
+        if (radioEnable() != MICROBIT_OK) return 0;
+        receivePacket(false);
+        return readImage();
     }
 
     /**
@@ -473,6 +542,16 @@ namespace radio {
         return readNumber();
     }
 
+    /**
+     * Returns the number payload from the last packet taken from the radio queue
+     * (via ``receiveNumber``, ``receiveString``, etc) or 0 if that packet did not
+     * contain a number.
+     */
+    //% help=radio/received-number
+    Image receivedImage() {
+        if (radioEnable() != MICROBIT_OK) return 0;
+        return readImage();
+    }
     /**
      * Returns the serial number of the sender micro:bit from the last packet taken
      * from the radio queue (via ``receiveNumber``, ``receiveString``, etc) or 0 if
